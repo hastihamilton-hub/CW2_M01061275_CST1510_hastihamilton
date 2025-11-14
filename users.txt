@@ -1,0 +1,2 @@
+alice,$2b$12$VOOUfPnf9A7uju0XxykDXe3nB/I80qtW6Madk2MlrpW4swpG7SO2a
+hasti,$2b$12$h1pMfeOxy.q1wu0IChJ8a.bwiS6rL/72lhQdIzS3B2V39aAp4FRbK
