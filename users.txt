@@ -1,2 +1,4 @@
 alice,$2b$12$VOOUfPnf9A7uju0XxykDXe3nB/I80qtW6Madk2MlrpW4swpG7SO2a
 hasti,$2b$12$h1pMfeOxy.q1wu0IChJ8a.bwiS6rL/72lhQdIzS3B2V39aAp4FRbK
+ela,$2b$12$yAeq.fOiN7mHEsYWHlQDau9T/m66V8SHhrw2gE7CN7qXpVBNQEQMe,admin
+pop,$2b$12$Vd37M681oey9uwNgoKydh.DLFq8QKJutlPsQiFbBsNS.oENOwgqp6,admin
