@@ -11,8 +11,7 @@ from app.services.user_service import (
     login_user,
 )
 
-# IMPORTANT: incidents are in SERVICES, not data
-from app.services.incidents import (
+from app.data.incidents import (
     insert_incident,
     update_incident_status,
     delete_incident,
