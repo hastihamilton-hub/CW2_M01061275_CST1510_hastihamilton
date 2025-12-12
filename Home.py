@@ -7,7 +7,6 @@ st.set_page_config(
 )
 
 if "users" not in st.session_state:
-    # Very simple in-memory "database": {username: password}
     st.session_state.users = {}
 
 if "logged_in" not in st.session_state:
@@ -18,14 +17,11 @@ if "username" not in st.session_state:
 
 st.title("Welcome")
 
-# If already logged in, go straight to dashboard (optional)
 if st.session_state.logged_in:
     st.success(f"Already logged in as {st.session_state.username}.")
     if st.button("Go to dashboard"):
         st.switch_page("pages/1_Dashboard.py")
-    st.stop()      # Do not show login/register again
-
-
+    st.stop()     
 tab_login, tab_register = st.tabs(["Login", "Register"])
 
 
@@ -42,7 +38,6 @@ with tab_login:
     if st.button("Log in", type="primary"):
         users = st.session_state.users
 
-        # Very simple credential check (teaching only!)
         if login_username in users and users[login_username] == login_password:
             st.session_state.logged_in = True
             st.session_state.username = login_username
@@ -78,3 +73,4 @@ with tab_register:
             st.session_state.users[new_username] = new_password
             st.success("Account created! You can now log in from the Login tab.")
             st.info("Go to the Login tab and sign in with your new account.")
+
