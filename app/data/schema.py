@@ -2,44 +2,41 @@
 
 from app.data.db import connect_database
 
+
 def create_users_table(conn):
     """
     Create the users table if it doesn't exist.
-
-    Args:
-        conn: Database connection object
     """
     cursor = conn.cursor()
 
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT DEFAULT 'user',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT DEFAULT 'user',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
-    cursor.execute(create_table_sql)
     conn.commit()
     print("Users table created successfully!")
 
 
 def create_cyber_incidents_table(conn):
     """
-    Create the cyber_incidents table.
+    Create cyber_incidents table matching load_cyber_incidents().
     """
     cursor = conn.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cyber_incidents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            incident_id TEXT,              -- optional, can stay NULL
-            date TEXT,                     -- e.g., '2024-11-01'
-            incident_type TEXT,            -- 'Phishing', 'Malware', etc.
-            severity TEXT,                 -- 'Critical', 'High', 'Medium', 'Low'
-            status TEXT,                   -- 'Open', 'Investigating', 'Resolved', 'Closed'
+            incident_id TEXT,              -- optional CSV column
+            date TEXT,                     -- CSV: timestamp
+            incident_type TEXT,            -- CSV: category
+            severity TEXT,
+            status TEXT,
             description TEXT,
             reported_by TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -52,52 +49,48 @@ def create_cyber_incidents_table(conn):
 
 def create_datasets_metadata_table(conn):
     """
-    Create the datasets_metadata table.
+    Create datasets_metadata table matching load_datasets_metadata().
     """
     cursor = conn.cursor()
 
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS datasets_metadata (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        dataset_name TEXT NOT NULL,
-        category TEXT,
-        source TEXT,
-        last_updated TEXT,
-        record_count INTEGER,
-        file_size_mb REAL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS datasets_metadata (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dataset_name TEXT NOT NULL,   -- CSV: name
+            category TEXT,                -- no column in CSV → NULL
+            source TEXT,                  -- CSV: uploaded_by
+            last_updated TEXT,            -- CSV: upload_date
+            record_count INTEGER,         -- CSV: rows
+            file_size_mb REAL,            -- CSV: columns (we reuse)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
-    cursor.execute(create_table_sql)
     conn.commit()
     print("Datasets Metadata table created successfully!")
 
 
 def create_it_tickets_table(conn):
     """
-    Create the it_tickets table.
-
-    Matches what load_it_tickets() inserts:
-    (priority, status, category, subject, description, created_date, resolved_date, assigned_to)
+    Create it_tickets table matching load_it_tickets().
+    IMPORTANT: DO NOT include ticket_id — your loader does NOT insert it.
     """
     cursor = conn.cursor()
 
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS it_tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        priority TEXT,
-        status TEXT,
-        category TEXT,
-        subject TEXT,
-        description TEXT,
-        created_date TEXT,
-        resolved_date TEXT,
-        assigned_to TEXT
-    )
-    """
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS it_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            priority TEXT,
+            status TEXT,
+            category TEXT,        -- will be NULL
+            subject TEXT,         -- we use description as subject
+            description TEXT,
+            created_date TEXT,    -- CSV: created_at
+            resolved_date TEXT,
+            assigned_to TEXT
+        )
+    """)
 
-    cursor.execute(create_table_sql)
     conn.commit()
     print("IT Tickets table created successfully!")
 

@@ -1,129 +1,177 @@
-# 1_Dashboard.py  (inside week9_app/pages)
+# pages/1_Dashboard.py
 
 import sys
 from pathlib import Path
 
-# --- Make sure Python can see the project root so "app" package works ---
-ROOT_DIR = Path(__file__).resolve().parents[2]   # .../CW2_M0106.../
+ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import streamlit as st
 import pandas as pd
-
 from app.data.db import connect_database
 
-# ----------------- Session / login guard -----------------
 
+# ----------------- Page config -----------------
 st.set_page_config(page_title="Dashboard", layout="wide")
 
-# Make sure keys exist
+
+# ----------------- Login guard -----------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# If not logged in, send user back to Home
 if not st.session_state.logged_in:
     st.error("You must be logged in to view the dashboard.")
     if st.button("Go to login page"):
         st.switch_page("Home.py")
     st.stop()
 
-# ----------------- Load data from your SQLite DB -----------------
 
-conn = connect_database()
+# ----------------- Load data from SQLite -----------------
+@st.cache_data(show_spinner=False)
+def load_incidents():
+    conn = connect_database()
+    df = pd.read_sql_query(
+        """
+        SELECT id, date, incident_type, severity, status, description
+        FROM cyber_incidents
+        ORDER BY id DESC
+        """,
+        conn,
+    )
+    conn.close()
+    return df
 
-# All incidents table
-incidents_df = pd.read_sql_query(
-    "SELECT id, date, incident_type, severity, status, description "
-    "FROM cyber_incidents",
-    conn,
+
+incidents_df = load_incidents()
+
+
+# ----------------- Title + Intro -----------------
+st.title("Incident Dashboard")
+
+st.markdown(
+    """
+**What this page shows**
+- This dashboard loads real records from the **cyber_incidents** table in the SQLite database.
+- You can filter incidents by **severity** and **status**, search through descriptions, and view simple charts.
+- The goal is to demonstrate **Streamlit multipage apps + data visualisation + database integration**.
+"""
 )
 
-conn.close()
+st.caption(f"Logged in as: {st.session_state.username}")
+st.divider()
 
-# ----------------- Page layout -----------------
 
-st.title("Dashboard")
-st.success(f"Hello, {st.session_state.username}! You are logged in.")
-
-st.caption("This dashboard shows data from the cyber_incidents table.")
-
-# ----- Sidebar filters -----
+# ----------------- Sidebar: navigation + filters -----------------
 with st.sidebar:
+    st.header("Navigation")
+
+    if st.button("AI Chat", use_container_width=True):
+        st.switch_page("pages/ai_chat.py")
+
+    if st.button("Log out", use_container_width=True):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.switch_page("Home.py")
+
+    st.divider()
     st.header("Filters")
 
-    severities = sorted(incidents_df["severity"].dropna().unique())
-    statuses = sorted(incidents_df["status"].dropna().unique())
+    severities = sorted(incidents_df["severity"].dropna().unique().tolist())
+    statuses = sorted(incidents_df["status"].dropna().unique().tolist())
+    types = sorted(incidents_df["incident_type"].dropna().unique().tolist())
 
-    selected_severity = st.multiselect(
-        "Severity", options=severities, default=severities
+    selected_severity = st.multiselect("Severity", options=severities, default=severities)
+    selected_status = st.multiselect("Status", options=statuses, default=statuses)
+
+    search_text = st.text_input("Search in description (optional)", value="")
+
+    sort_option = st.selectbox(
+        "Sort by",
+        ["Newest first (ID)", "Oldest first (ID)", "Severity A-Z", "Status A-Z"],
+        index=0,
     )
-    selected_status = st.multiselect(
-        "Status", options=statuses, default=statuses
-    )
 
-    show_table = st.checkbox("Show full incidents table", value=True)
+    show_table = st.checkbox("Show filtered table", value=True)
+    show_raw = st.checkbox("Show raw data", value=False)
 
-# Apply filters
-filtered_incidents = incidents_df[
+
+# ----------------- Apply filters -----------------
+filtered = incidents_df[
     incidents_df["severity"].isin(selected_severity)
     & incidents_df["status"].isin(selected_status)
-]
+].copy()
 
-# ----- Top-level metrics -----
-col1, col2, col3 = st.columns(3)
+if search_text.strip():
+    filtered = filtered[filtered["description"].str.contains(search_text, case=False, na=False)]
+
+
+# ----------------- Sorting -----------------
+if sort_option == "Newest first (ID)":
+    filtered = filtered.sort_values("id", ascending=False)
+elif sort_option == "Oldest first (ID)":
+    filtered = filtered.sort_values("id", ascending=True)
+elif sort_option == "Severity A-Z":
+    filtered = filtered.sort_values("severity", ascending=True)
+elif sort_option == "Status A-Z":
+    filtered = filtered.sort_values("status", ascending=True)
+
+
+# ----------------- Metrics -----------------
+col1, col2, col3, col4 = st.columns(4)
+
 with col1:
     st.metric("Total incidents", len(incidents_df))
 with col2:
-    st.metric("Filtered incidents", len(filtered_incidents))
+    st.metric("Filtered incidents", len(filtered))
 with col3:
-    high_count = (filtered_incidents["severity"] == "High").sum()
-    st.metric("High-severity (filtered)", int(high_count))
+    high_count = int((filtered["severity"] == "High").sum())
+    st.metric("High severity (filtered)", high_count)
+with col4:
+    open_count = int((filtered["status"].str.lower() == "open").sum()) if "status" in filtered else 0
+    st.metric("Open (filtered)", open_count)
 
 st.divider()
 
-# ----- Charts -----
-st.subheader("Incidents by severity")
 
-severity_counts = (
-    filtered_incidents["severity"].value_counts()
-    .sort_index()
-    .rename_axis("severity")
-    .reset_index(name="count")
-)
-st.bar_chart(severity_counts.set_index("severity"))
+# ----------------- Charts -----------------
+left, right = st.columns(2)
 
-st.subheader("Incidents by status")
+with left:
+    st.subheader("Incidents by Severity")
+    sev_counts = filtered["severity"].value_counts().sort_index()
+    st.bar_chart(sev_counts)
 
-status_counts = (
-    filtered_incidents["status"].value_counts()
-    .sort_index()
-    .rename_axis("status")
-    .reset_index(name="count")
-)
-st.bar_chart(status_counts.set_index("status"))
+with right:
+    st.subheader("Incidents by Status")
+    status_counts = filtered["status"].value_counts().sort_index()
+    st.bar_chart(status_counts)
 
 st.divider()
 
-# ----- Tables -----
+
+# ----------------- Extra insight (Top Types) -----------------
+st.subheader("Top Incident Types (Filtered)")
+type_counts = filtered["incident_type"].value_counts().head(5)
+
+if len(type_counts) == 0:
+    st.info("No records found with the selected filters.")
+else:
+    st.bar_chart(type_counts)
+
+st.divider()
+
+
+# ----------------- Table views -----------------
 st.subheader("Recent Incidents")
 
 if show_table:
-    st.dataframe(filtered_incidents)
+    st.dataframe(filtered, use_container_width=True)
 else:
-    st.info("Enable 'Show full incidents table' in the sidebar to see the table.")
+    st.info("Enable 'Show filtered table' in the sidebar to see the incident table.")
 
-with st.expander("See raw data (unfiltered)"):
-    st.dataframe(incidents_df)
-
-st.divider()
-
-# ----- Logout -----
-if st.button("Log out"):
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.info("You have been logged out.")
-    st.switch_page("Home.py")
-
+if show_raw:
+    st.subheader("Raw Data (Unfiltered)")
+    st.dataframe(incidents_df, use_container_width=True)

@@ -1,21 +1,24 @@
+# app/data/db.py
 import sqlite3
 from pathlib import Path
 
-# Folder where DATA files and CSVs exist
+# Folder that holds the database file and CSVs
 DATA_DIR = Path("DATA")
+DATA_DIR.mkdir(exist_ok=True)  # make sure folder exists
 
-# Path to database file
+# Full path to database file
 DB_PATH = DATA_DIR / "intelligence_platform.db"
 
 
 def connect_database(db_path=DB_PATH):
     """
     Connect to the SQLite database.
-    Creates the DATA folder and DB file if they don't exist.
+    Creates the database file if it doesn't exist.
+
+    Args:
+        db_path: Path to the database file
+
+    Returns:
+        sqlite3.Connection: Database connection object
     """
-
-    # Make sure DATA directory exists
-    DATA_DIR.mkdir(exist_ok=True)
-
-    # Connect to database
     return sqlite3.connect(str(db_path))

@@ -170,21 +170,58 @@ Main Features of the Week 9 App:
 - Example sidebar filters and expandable sections
 - Basic “mini dashboard” layout using columns and sidebars
 
-How to Run:
-
-1. Install Streamlit:
-pip install streamlit
-
-2. Run the app from inside the week9_app folder:
-streamlit run .\week9_app\Home.py
-
-File Structure
-week9_app/
-│── Home.py                 # Login/Register page
-└── pages/
-    └── 1_Dashboard.py      # Protected dashboard page
 
 Summary:
 The goal of Week 9 was to learn how to build interactive Streamlit web applications.
 I practiced text elements, widgets, charts, layouts, session state, and multi-page navigation.
 The final result is a working login system and a simple dashboard page that demonstrates real Streamlit functionality.
+
+Week 9&10: Streamlit Multi-Page Application:
+
+Project Overview:
+
+This week, a multi-page Streamlit web application was developed to demonstrate UI elements, widgets, layouts, session management, and page navigation.
+
+The application includes:
+- A Login / Register page
+- A protected Dashboard page
+- An AI Chat page
+- Data visualisation using real data from the SQLite database
+
+Main Features of the Week 9 App:
+- Multi-page Streamlit structure (Home.py + pages)
+- Login and Register tabs using st.tabs()
+- Session management using st.session_state
+- Page navigation using st.switch_page()
+- Widgets: text inputs, buttons, sliders, checkboxes, selectboxes, multiselects
+- Charts using Streamlit built-ins (bar charts)
+- Sidebar filters and expandable sections
+- Dashboard displaying real incident data
+
+Dashboard:
+- Loads data from the cyber_incidents SQLite table
+- Interactive severity and status filters
+- Summary metrics:
+    - Total incidents
+    - Filtered incidents
+    - High-severity incidents
+- Visualisations using Streamlit charts
+- Data tables with expandable raw data view
+
+AI Chat Assistant:
+- Chat interface built with Streamlit chat components
+- Maintains conversation history during the session
+- Supports streaming responses for improved user experience
+- Accessible only after successful login
+
+Important Note About the AI Chat:
+    The OpenAI API key is not included in this repository for security reasons.
+    The AI chat feature will not work by default.
+The API key will be provided by the instructor during marking or demonstration, and should be placed in:
+.streamlit/secrets.toml
+
+Summary:
+The goal of Week 9 and 10 was to learn how to build interactive Streamlit web applications.
+This included working with text elements, widgets, charts, layouts, session state, multi-page navigation, and AI integration.
+
+The final result is a functional multi-page Streamlit application with authentication, a data-driven dashboard, and an AI chat interface.
