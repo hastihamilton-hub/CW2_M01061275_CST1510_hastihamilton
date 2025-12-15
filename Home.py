@@ -1,76 +1,80 @@
 import streamlit as st
 
+from app.services.user_service import register_user, login_user
+
+
 st.set_page_config(
     page_title="Login / Register",
     page_icon="🔑",
     layout="centered",
 )
 
-if "users" not in st.session_state:
-    st.session_state.users = {}
-
+# -----------------------------
+# Session state (login only)
+# -----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-st.title("Welcome")
+st.title("🔐 Multi-Domain Intelligence Platform")
+st.caption("Login or create an account to access the dashboard.")
 
+# If already logged in, jump to dashboard
 if st.session_state.logged_in:
-    st.success(f"Already logged in as {st.session_state.username}.")
-    if st.button("Go to dashboard"):
-        st.switch_page("pages/1_Dashboard.py")
-    st.stop()     
+    st.success(f"Already logged in as **{st.session_state.username}**.")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("📊 Go to Dashboard", use_container_width=True):
+            st.switch_page("pages/1_Dashboard.py")
+    with col_b:
+        if st.button("💬 Go to AI Chat", use_container_width=True):
+            st.switch_page("pages/ai_chat.py")
+    st.stop()
+
+# -----------------------------
+# Tabs
+# -----------------------------
 tab_login, tab_register = st.tabs(["Login", "Register"])
 
-
+# ----- LOGIN TAB -----
 with tab_login:
     st.subheader("Login")
 
     login_username = st.text_input("Username", key="login_username")
-    login_password = st.text_input(
-        "Password",
-        type="password",
-        key="login_password",
-    )
+    login_password = st.text_input("Password", type="password", key="login_password")
 
-    if st.button("Log in", type="primary"):
-        users = st.session_state.users
+    if st.button("Log in", type="primary", use_container_width=True):
+        success, msg = login_user(login_username, login_password)
 
-        if login_username in users and users[login_username] == login_password:
+        if success:
             st.session_state.logged_in = True
             st.session_state.username = login_username
-            st.success(f"Welcome back, {login_username}!")
+            st.success(msg)
             st.switch_page("pages/1_Dashboard.py")
         else:
-            st.error("Invalid username or password.")
+            st.error(msg)
 
-
+# ----- REGISTER TAB -----
 with tab_register:
     st.subheader("Register")
 
     new_username = st.text_input("Choose a username", key="register_username")
-    new_password = st.text_input(
-        "Choose a password",
-        type="password",
-        key="register_password",
-    )
-    confirm_password = st.text_input(
-        "Confirm password",
-        type="password",
-        key="register_confirm",
-    )
+    new_password = st.text_input("Choose a password", type="password", key="register_password")
+    confirm_password = st.text_input("Confirm password", type="password", key="register_confirm")
 
-    if st.button("Create account"):
+    role = st.selectbox("Role (optional)", ["user", "analyst", "admin"], index=0)
+
+    if st.button("Create account", use_container_width=True):
         if not new_username or not new_password:
             st.warning("Please fill in all fields.")
         elif new_password != confirm_password:
             st.error("Passwords do not match.")
-        elif new_username in st.session_state.users:
-            st.error("Username already exists. Choose another one.")
         else:
-            st.session_state.users[new_username] = new_password
-            st.success("Account created! You can now log in from the Login tab.")
-            st.info("Go to the Login tab and sign in with your new account.")
-
+            success, msg = register_user(new_username, new_password, role)
+            if success:
+                st.success(msg)
+                st.info("Now switch to the Login tab and sign in.")
+            else:
+                st.error(msg)
