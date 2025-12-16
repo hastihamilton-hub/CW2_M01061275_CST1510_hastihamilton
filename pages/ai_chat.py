@@ -1,6 +1,10 @@
 import sys
 from pathlib import Path
 
+# -------------------------------------------------
+# Ensure project root is available in Python path
+# This allows imports like app.services, app.data, etc.
+# -------------------------------------------------
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
@@ -8,55 +12,64 @@ if str(ROOT_DIR) not in sys.path:
 import streamlit as st
 from openai import OpenAI
 
-# ----------------------------
-# Page Config
-# ----------------------------
+
+# -------------------------------------------------
+# Page configuration
+# -------------------------------------------------
 st.set_page_config(
     page_title="AI Chat",
     page_icon="🤖",
     layout="wide",
 )
 
-# ----------------------------
-# Guard: must be logged in
-# ----------------------------
+
+# -------------------------------------------------
+# Access control: user must be logged in
+# -------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if "username" not in st.session_state:
     st.session_state.username = ""
 
+# Block access if user is not authenticated
 if not st.session_state.logged_in:
     st.error("You must be logged in to use the AI Chat.")
     if st.button("Go to Login"):
         st.switch_page("Home.py")
     st.stop()
 
-# ----------------------------
-# Load API key from secrets
-# ----------------------------
-# Create .streamlit/secrets.toml with:
-# OPENAI_API_KEY = "your_key"
+
+# -------------------------------------------------
+# OpenAI client setup
+# API key is securely loaded from Streamlit secrets
+# -------------------------------------------------
+# secrets.toml example:
+# OPENAI_API_KEY = "your_api_key_here"
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ----------------------------
-# Sidebar controls
-# ----------------------------
+
+# -------------------------------------------------
+# Sidebar controls (AI configuration)
+# -------------------------------------------------
 with st.sidebar:
     st.title("🤖 AI Settings")
 
+    # Select the assistant behavior / domain
     mode = st.selectbox(
         "Assistant mode",
         ["General", "Cybersecurity", "Data Science", "IT Support"],
         index=0,
     )
 
+    # Choose which OpenAI model to use
     model = st.selectbox(
         "Model",
         ["gpt-4o-mini", "gpt-4o"],
         index=0,
     )
 
+    # Control response creativity
     temperature = st.slider(
         "Creativity (temperature)",
         0.0, 2.0, 0.7, 0.1
@@ -64,15 +77,20 @@ with st.sidebar:
 
     st.divider()
 
+    # Clear chat history button
     if st.button("🗑 Clear chat", use_container_width=True):
         st.session_state.chat_messages = []
         st.rerun()
 
-# ----------------------------
-# System prompts (looks impressive)
-# ----------------------------
+
+# -------------------------------------------------
+# System prompts per assistant mode
+# These define the AI's role and response style
+# -------------------------------------------------
 SYSTEM_PROMPTS = {
-    "General": "You are a helpful assistant. Explain clearly and politely.",
+    "General": (
+        "You are a helpful assistant. Explain clearly and politely."
+    ),
     "Cybersecurity": (
         "You are a cybersecurity assistant. Give structured answers with practical steps, "
         "mention common threats, mitigations, and best practices."
@@ -86,41 +104,51 @@ SYSTEM_PROMPTS = {
     ),
 }
 
-# ----------------------------
-# Title
-# ----------------------------
-st.title("💬 AI Chat")
-st.caption(f"Logged in as **{st.session_state.username}** • Mode: **{mode}**")
 
-# ----------------------------
+# -------------------------------------------------
+# Page header
+# -------------------------------------------------
+st.title("💬 AI Chat")
+st.caption(
+    f"Logged in as **{st.session_state.username}** • Mode: **{mode}**"
+)
+
+
+# -------------------------------------------------
 # Chat session state
-# ----------------------------
+# Stores conversation history for the current session
+# -------------------------------------------------
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 
-# Build message list for the API (include system prompt first)
+# Build message list sent to OpenAI
+# System prompt is always the first message
 api_messages = [{"role": "system", "content": SYSTEM_PROMPTS[mode]}]
 api_messages += st.session_state.chat_messages
 
-# ----------------------------
-# Display previous messages
-# ----------------------------
+
+# -------------------------------------------------
+# Display previous chat messages
+# -------------------------------------------------
 for msg in st.session_state.chat_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# ----------------------------
-# Input box
-# ----------------------------
+
+# -------------------------------------------------
+# User input box
+# -------------------------------------------------
 prompt = st.chat_input("Type a message...")
 
 if prompt:
-    # Show user message immediately
-    st.session_state.chat_messages.append({"role": "user", "content": prompt})
+    # Store and display user message immediately
+    st.session_state.chat_messages.append(
+        {"role": "user", "content": prompt}
+    )
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate assistant reply (streaming)
+    # Generate assistant response using streaming
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_reply = ""
@@ -128,34 +156,44 @@ if prompt:
         try:
             stream = client.chat.completions.create(
                 model=model,
-                messages=api_messages + [{"role": "user", "content": prompt}],
+                messages=api_messages + [
+                    {"role": "user", "content": prompt}
+                ],
                 temperature=temperature,
                 stream=True,
             )
 
+            # Stream response chunk-by-chunk
             for chunk in stream:
                 delta = chunk.choices[0].delta
                 if delta and delta.content:
                     full_reply += delta.content
                     placeholder.markdown(full_reply + "▌")
 
+            # Final response without cursor
             placeholder.markdown(full_reply)
 
         except Exception as e:
+            # Graceful error handling
             full_reply = f"⚠️ Error: {e}"
             placeholder.markdown(full_reply)
 
-    # Save assistant reply
-    st.session_state.chat_messages.append({"role": "assistant", "content": full_reply})
+    # Save assistant reply to session history
+    st.session_state.chat_messages.append(
+        {"role": "assistant", "content": full_reply}
+    )
 
-# ----------------------------
-# Quick navigation buttons
-# ----------------------------
+
+# -------------------------------------------------
+# Navigation buttons
+# -------------------------------------------------
 st.divider()
 col1, col2 = st.columns(2)
+
 with col1:
     if st.button("⬅ Back to Dashboard"):
         st.switch_page("pages/1_Dashboard.py")
+
 with col2:
     if st.button("🚪 Log out"):
         st.session_state.logged_in = False
